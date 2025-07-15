@@ -11,7 +11,7 @@ jobs:
 
     env:
       AWS_REGION: ap-southeast-1
-      S3_BUCKET: your-s3-bucket-name  # Thay bằng tên bucket thực tế
+      S3_BUCKET: terraform-logging-034362060101  # Thay bằng tên bucket thực tế
 
     steps:
       - name: Checkout code
