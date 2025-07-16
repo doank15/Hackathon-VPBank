@@ -1,5 +1,11 @@
 module "s3" {
   source = "./modules/s3"
+  bucket_name = "statetf-bucket-111"
+  versioning = true
+  tags = {
+    Environment = "dev"
+    Project = "Hackathon"
+  }
 }
 
 module "eventbridge" {
