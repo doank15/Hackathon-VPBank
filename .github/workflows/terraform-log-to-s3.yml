@@ -34,7 +34,12 @@ jobs:
         run: terraform -chdir=terraform plan -out=tfplan > terraform/plan.log
 
       - name: Terraform Apply (log output)
-        run: terraform -chdir=terraform apply -auto-approve tfplan > terraform/apply.log
+        run: |
+          BUCKET="statetf-bucket-test"
+          if aws s3api head-bucket --bucket "$BUCKET" 2>/dev/null; then
+            terraform -chdir=terraform import 'module.s3.aws_s3_bucket.this' "$BUCKET"
+          fi
+          terraform -chdir=terraform apply -auto-approve tfplan > terraform/apply.log
 
       - name: Format log (convert to JSON)
         run: |
