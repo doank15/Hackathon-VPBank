@@ -5,7 +5,7 @@ from unittest.mock import patch, MagicMock
 
 # Add the parent directory to the Python path to allow importing lambda_function
 # sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-import lambda_function
+from lambda_Func.bedrockAnalyze import lambda_function
 
 # --- Mock Environment Variables for Local Testing ---
 os.environ['SNS_TOPIC_ARN'] = 'arn:aws:sns:ap-southeast-1:123456789012:test-drift-guard-notifications'
