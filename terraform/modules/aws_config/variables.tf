@@ -1,4 +1,8 @@
+variable "role_arn" {
+  type        = string
+  description = "IAM role ARN for AWS Config"
+}
 variable "s3_bucket" {
-  description = "The s3 bucket name to use"
-  type = string
+  type        = string
+  description = "S3 bucket for AWS Config logs"
 }

@@ -1,4 +1,8 @@
+variable "name" {
+  type        = string
+  description = "EventBridge bus name"
+}
 variable "s3_bucket" {
-  description = "The s3 bucket name to use"
-  type = string
+  type        = string
+  description = "S3 bucket for event logs"
 }
