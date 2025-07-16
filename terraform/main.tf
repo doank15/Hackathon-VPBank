@@ -7,3 +7,18 @@ module "s3" {
     Project = "Hackathon"
   }
 }
+
+module "eventbridge" {
+  source = "./modules/eventbridge"
+  s3_bucket = module.s3.bucket_name
+}
+
+module "aws_config" {
+  source = "./modules/aws_config"
+  s3_bucket = module.s3.bucket_name
+}
+
+module "lambda" {
+  source = "./modules/lambda"
+  s3_bucket = module.s3.bucket_name
+}
