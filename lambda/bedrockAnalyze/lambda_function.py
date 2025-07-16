@@ -49,7 +49,6 @@ def invoke_bedrock_knowledge_base(query_text: str) -> str:
         print(f"ERROR: Failed to invoke Bedrock Knowledge Base: {e}")
         return f"Error: Could not get detailed explanation from AI. Reason: {str(e)}"
 
-# Lambda handler function
 # --- Lambda Handler Function ---
 def lambda_handler(event, context):
     """
@@ -158,6 +157,49 @@ def lambda_handler(event, context):
     Best regards,
     The DriftGuard System
     """
+    # --- NEW: 3.5 Store Drift Analysis in S3 for Knowledge Base Ingestion ---
+    S3_BUCKET_FOR_DRIFT_HISTORY = os.environ.get('S3_BUCKET_FOR_DRIFT_HISTORY') # Define this env var
+    if S3_BUCKET_FOR_DRIFT_HISTORY:
+        s3_client = boto3.client('s3')
+    
+        # Consolidate all relevant data into a single dict for storage
+        drift_report_for_kb = {
+            "drift_id": drift_id,
+            "resource_type": resource_type,
+            "resource_id": resource_id,
+            "resource_name": resource_name,
+            "aws_account_id": aws_account_id,
+            "aws_region": aws_region,
+            "change_timestamp": change_timestamp,
+            "detected_drift_details": detected_drift_details,
+            "cloudtrail_event_summary": cloudtrail_event_summary,
+            "desired_state_snapshot": desired_state_snapshot,
+            "actual_state_snapshot": actual_state_snapshot,
+            "ai_analysis_markdown": llm_analysis_output, # Store the full AI output
+            "report_generated_at": datetime.now().isoformat()
+        }
+        
+        # Define a unique filename for the report
+        s3_key = f"drift-reports/{drift_id}.json" # Or .md if you prefer markdown files directly
+        
+        try:
+            s3_client.put_object(
+                Bucket=S3_BUCKET_FOR_DRIFT_HISTORY,
+                Key=s3_key,
+                Body=json.dumps(drift_report_for_kb, indent=2),
+                ContentType='application/json' # Or 'text/markdown'
+            )
+            print(f"Successfully stored drift report to S3 bucket {S3_BUCKET_FOR_DRIFT_HISTORY} at {s3_key}")
+            
+            # Optional: Trigger Knowledge Base ingestion if needed for immediate indexing
+            # This requires an additional Bedrock Agent client or a specific API call.
+            # For simplicity, often the KB is set to periodically re-sync its S3 source.
+            # If immediate ingestion is critical, you'd need to explore Bedrock KB APIs for "UpdateDataSource"
+            # and handle the ingestion job status. For a challenge, periodic sync is usually fine.
+
+        except Exception as e:
+            print(f"ERROR: Failed to store drift report to S3 for KB: {e}")
+            # Decide if this failure should halt the Lambda or just log
 
     # --- 4. Publish to SNS ---
     if not SNS_TOPIC_ARN:
