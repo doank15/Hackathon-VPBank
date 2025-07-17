@@ -1,7 +1,7 @@
 name: Terraform Plan & Apply with Log Upload
 
 on:
-  pull_request:
+  push:
     branches:
       - main
 
@@ -11,10 +11,10 @@ jobs:
 
     env:
       AWS_REGION: ap-southeast-1
-      S3_BUCKET: terraform-logging-034362060101  # Thay bằng tên bucket thực tế
+      S3_BUCKET: terraform-logging-034362060101
 
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v3
 
       - name: Set up Terraform
@@ -34,11 +34,13 @@ jobs:
         run: terraform -chdir=terraform plan -out=tfplan > terraform/plan.log
 
       - name: Terraform Apply (log output)
-        run: terraform -chdir=terraform apply -auto-approve tfplan > terraform/apply.log
         run: |
           BUCKET="statetf-bucket-test"
+          terraform -chdir=terraform init -input=false
           if aws s3api head-bucket --bucket "$BUCKET" 2>/dev/null; then
-            terraform -chdir=terraform import 'module.s3.aws_s3_bucket.this' "$BUCKET"
+            if ! terraform -chdir=terraform state list | grep -q "module.s3.aws_s3_bucket.this"; then
+              terraform -chdir=terraform import 'module.s3.aws_s3_bucket.this' "$BUCKET"
+            fi
           fi
           terraform -chdir=terraform apply -auto-approve tfplan > terraform/apply.log
 
@@ -49,3 +51,4 @@ jobs:
           echo '"}' >> terraform/apply.json
 
       - name: Upload log to S3
+        run: aws s3 cp terraform/apply.json s3://$S3_BUCKET/logs/apply-$(date +%s).json 
