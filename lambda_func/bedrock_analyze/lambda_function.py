@@ -16,10 +16,11 @@ KNOWLEDGE_BASE_ID = os.environ.get('KNOWLEDGE_BASE_ID', "HZDWN3EYQP")
 # FIXED: Use inference profile ARN instead of model ARN for KB
 BEDROCK_MODEL_ARN_FOR_KB = os.environ.get('BEDROCK_MODEL_ARN_FOR_KB', 
     "arn:aws:bedrock:ap-southeast-1:034362060101:inference-profile/anthropic.claude-3-sonnet-20240229-v1:0")
+# "arn:aws:bedrock:ap-southeast-1::foundation-model/anthropic.claude-v2")
 
 # FIXED: Use inference profile ID instead of model ID for direct invocation
 BEDROCK_MODEL_ID_FOR_DIRECT_INVOKE = os.environ.get('BEDROCK_MODEL_ID_FOR_DIRECT_INVOKE', 
-    "anthropic.claude-3-sonnet-20240229-v1:0")
+    "anthropic.claude-v2")
 
 def invoke_bedrock_knowledge_base(query_text: str) -> str:
     """
@@ -289,13 +290,6 @@ DriftGuard has detected infrastructure drift that requires immediate attention.
 ## 🔍 **AI Analysis & Remediation**
 
 {llm_analysis_output}
-
----
-## ⚡ **Next Steps**
-1. **Immediate:** Review the analysis above
-2. **Action:** Choose and execute one of the remediation options
-3. **Follow-up:** Update incident tracking and documentation
-4. **Prevention:** Implement suggested monitoring/prevention measures
 
 ---
 **This is an automated alert from DriftGuard System**  
