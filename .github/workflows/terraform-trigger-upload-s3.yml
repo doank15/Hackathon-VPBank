@@ -14,7 +14,7 @@ jobs:
       S3_BUCKET: terraform-logging-034362060101  # Thay bằng tên bucket thực tế
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v3
 
       - name: Set up Terraform
