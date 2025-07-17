@@ -8,7 +8,7 @@ sns_client = boto3.client('sns')
 bedrock_agent_runtime_client = boto3.client('bedrock-agent-runtime')
 
 # Configuration
-SNS_TOPIC_ARN = os.environ.get('SNS_TOPIC_ARN',"arn:aws:sns:ap-southeast-1:034362060101:iac-drift-alerts:4f852814-a390-41da-837b-f72b242cf095")
+SNS_TOPIC_ARN = os.environ.get('SNS_TOPIC_ARN',"arn:aws:sns:ap-southeast-1:034362060101:bedrock-drift-analyze")
 if not SNS_TOPIC_ARN:
     raise ValueError("SNS_TOPIC_ARN environment variable is not set.")
 KNOWLEDGE_BASE_ID = os.environ.get('KNOWLEDGE_BASE_ID',"HZDWN3EYQP")
@@ -17,7 +17,9 @@ if not KNOWLEDGE_BASE_ID:
 BEDROCK_MODEL_ARN_FOR_KB = os.environ.get('BEDROCK_MODEL_ARN_FOR_KB',"arn:aws:bedrock:ap-southeast-1::foundation-model/anthropic.claude-3-5-sonnet-20241022-v2:0")
 if not BEDROCK_MODEL_ARN_FOR_KB:
     raise ValueError("BEDROCK_MODEL_ARN_FOR_KB environment variable is not set.")
-
+BEDROCK_MODEL_ARN_FOR_KB = "arn:aws:bedrock:ap-southeast-1::foundation-model/anthropic.claude-3-sonnet-20240229-v1:0"
+# BEDROCK_MODEL_ARN_FOR_KB = "arn:aws:bedrock:ap-southeast-1::foundation-model/anthropic.claude-3-haiku-20240307-v1:0"
+# BEDROCK_MODEL_ARN_FOR_KB = "anthropic.claude-3-5-sonnet-20241022-v2:0" 
 
 # help function for bedrock RAG (knowledge base)
 def invoke_bedrock_knowledge_base(query_text: str) -> str:
@@ -28,7 +30,7 @@ def invoke_bedrock_knowledge_base(query_text: str) -> str:
     if not KNOWLEDGE_BASE_ID or not BEDROCK_MODEL_ARN_FOR_KB:
         return "Error: Bedrock Knowledge Base not configured properly in Lambda environment variables."
 
-    print(f"Invoking Bedrock Knowledge Base with query (first 500 chars):\n{query_text[:500]}...")
+    # print(f"Invoking Bedrock Knowledge Base with query (first 500 chars):\n{query_text[:500]}...")
     try:
         response = bedrock_agent_runtime_client.retrieve_and_generate(
             input={
@@ -38,12 +40,17 @@ def invoke_bedrock_knowledge_base(query_text: str) -> str:
                 'type': 'KNOWLEDGE_BASE',
                 'knowledgeBaseConfiguration': {
                     'knowledgeBaseId': KNOWLEDGE_BASE_ID,
-                    'modelArn': BEDROCK_MODEL_ARN_FOR_KB
+                    'modelArn': BEDROCK_MODEL_ARN_FOR_KB,
+                    'retrievalConfiguration': {
+                        'vectorSearchConfiguration': {
+                            'numberOfResults': 5
+                        }
+                    }
                 }
             }
         )
         llm_output = response['output']['text']
-        print(f"Bedrock response received (first 500 chars):\n{llm_output[:500]}...")
+        # print(f"Bedrock response received (first 500 chars):\n{llm_output[:500]}...")
         return llm_output
     except Exception as e:
         print(f"ERROR: Failed to invoke Bedrock Knowledge Base: {e}")
