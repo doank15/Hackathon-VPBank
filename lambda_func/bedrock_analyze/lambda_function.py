@@ -8,13 +8,13 @@ sns_client = boto3.client('sns')
 bedrock_agent_runtime_client = boto3.client('bedrock-agent-runtime')
 
 # Configuration
-SNS_TOPIC_ARN = os.environ.get('SNS_TOPIC_ARN')
+SNS_TOPIC_ARN = os.environ.get('SNS_TOPIC_ARN',"arn:aws:sns:ap-southeast-1:034362060101:iac-drift-alerts:4f852814-a390-41da-837b-f72b242cf095")
 if not SNS_TOPIC_ARN:
     raise ValueError("SNS_TOPIC_ARN environment variable is not set.")
-KNOWLEDGE_BASE_ID = os.environ.get('KNOWLEDGE_BASE_ID')
+KNOWLEDGE_BASE_ID = os.environ.get('KNOWLEDGE_BASE_ID',"HZDWN3EYQP")
 if not KNOWLEDGE_BASE_ID:
     raise ValueError("KNOWLEDGE_BASE_ID environment variable is not set.")
-BEDROCK_MODEL_ARN_FOR_KB = os.environ.get('BEDROCK_MODEL_ARN_FOR_KB')
+BEDROCK_MODEL_ARN_FOR_KB = os.environ.get('BEDROCK_MODEL_ARN_FOR_KB',"arn:aws:bedrock:ap-southeast-1::foundation-model/anthropic.claude-3-5-sonnet-20241022-v2:0")
 if not BEDROCK_MODEL_ARN_FOR_KB:
     raise ValueError("BEDROCK_MODEL_ARN_FOR_KB environment variable is not set.")
 
@@ -158,7 +158,7 @@ def lambda_handler(event, context):
     The DriftGuard System
     """
     # --- NEW: 3.5 Store Drift Analysis in S3 for Knowledge Base Ingestion ---
-    S3_BUCKET_FOR_DRIFT_HISTORY = os.environ.get('S3_BUCKET_FOR_DRIFT_HISTORY') # Define this env var
+    S3_BUCKET_FOR_DRIFT_HISTORY = os.environ.get('S3_BUCKET_FOR_DRIFT_HISTORY',"statetf-bucket") # Define this env var
     if S3_BUCKET_FOR_DRIFT_HISTORY:
         s3_client = boto3.client('s3')
     
@@ -180,7 +180,7 @@ def lambda_handler(event, context):
         }
         
         # Define a unique filename for the report
-        s3_key = f"drift-reports/{drift_id}.json" # Or .md if you prefer markdown files directly
+        s3_key = f"drift-logs/{drift_id}.json" # Or .md if you prefer markdown files directly
         
         try:
             s3_client.put_object(
