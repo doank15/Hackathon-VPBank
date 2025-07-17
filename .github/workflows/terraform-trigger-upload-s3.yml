@@ -1,7 +1,7 @@
 name: Terraform Plan & Apply with Log Upload
 
 on:
-  push:
+  pull_request:
     branches:
       - main
 
