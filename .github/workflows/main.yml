@@ -1,4 +1,4 @@
-name: Terraform Plan and Upload
+name: Terraform Plan & Apply with Log Upload
 
 on:
   push:
@@ -6,29 +6,46 @@ on:
       - main
 
 jobs:
-  plan-and-upload:
+  terraform:
     runs-on: ubuntu-latest
+
+    env:
+      AWS_REGION: ap-southeast-1
+      S3_BUCKET: terraform-logging-034362060101  # Thay bằng tên bucket thực tế
+
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v3
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v2
 
-      - name: Generate Terraform plan JSON
-        run: |
-          cd terraform/
-          terraform init
-          terraform plan -refresh-only -input=false -out=tfplan.out
-          terraform show -json tfplan.out > tfplan.json
-
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ap-southeast-1
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Upload tfplan to S3
+      - name: Terraform Init
+        run: terraform -chdir=terraform init
+
+      - name: Terraform Plan (log output)
+        run: terraform -chdir=terraform plan -out=tfplan > terraform/plan.log
+
+      - name: Terraform Apply (log output)
+        run: terraform -chdir=terraform apply -auto-approve tfplan > terraform/apply.log
         run: |
-          aws s3 cp tfplan.json s3://your-bucket-name/plans/tfplan.json
+          BUCKET="statetf-bucket-test"
+          if aws s3api head-bucket --bucket "$BUCKET" 2>/dev/null; then
+            terraform -chdir=terraform import 'module.s3.aws_s3_bucket.this' "$BUCKET"
+          fi
+          terraform -chdir=terraform apply -auto-approve tfplan > terraform/apply.log
+
+      - name: Format log (convert to JSON)
+        run: |
+          echo '{"log": "' > terraform/apply.json
+          cat terraform/apply.log | sed 's/\"/\\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g' >> terraform/apply.json
+          echo '"}' >> terraform/apply.json
+
+      - name: Upload log to S3
