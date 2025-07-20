@@ -2,6 +2,7 @@ import json
 import os
 import boto3
 from datetime import datetime
+import markdown
 
 # --AWS server client
 sns_client = boto3.client('sns')
@@ -9,13 +10,20 @@ bedrock_agent_runtime_client = boto3.client('bedrock-agent-runtime')
 # Client for direct LLM invocation if KB fails
 bedrock_runtime_client = boto3.client('bedrock-runtime')
 
+# New: SES client
+ses_client = boto3.client('ses')
+
+# New SES Email Configuration
+SENDER_EMAIL_ADDRESS = os.environ.get('SENDER_EMAIL_ADDRESS', "nguyenthaithinh9876@gmail.com") # Must be a verified SES identity
+RECIPIENT_EMAIL_ADDRESSES = os.environ.get('RECIPIENT_EMAIL_ADDRESSES', "nguyenthaithinh9876@gmail.com").split(',') # List of recipients
+
 # Configuration
 SNS_TOPIC_ARN = os.environ.get('SNS_TOPIC_ARN', "arn:aws:sns:ap-southeast-1:034362060101:bedrock-drift-analyze")
 KNOWLEDGE_BASE_ID = os.environ.get('KNOWLEDGE_BASE_ID', "HZDWN3EYQP")
 
 # FIXED: Use inference profile ARN instead of model ARN for KB
-BEDROCK_MODEL_ARN_FOR_KB = os.environ.get('BEDROCK_MODEL_ARN_FOR_KB', 
-    "arn:aws:bedrock:ap-southeast-1:034362060101:inference-profile/anthropic.claude-3-sonnet-20240229-v1:0")
+BEDROCK_MODEL_ARN_FOR_KB = os.environ.get('BEDROCK_MODEL_ARN_FOR_KB',
+    "anthropic.claude-sonnet-4-20250514-v1:0")
 # "arn:aws:bedrock:ap-southeast-1::foundation-model/anthropic.claude-v2")
 
 # FIXED: Use inference profile ID instead of model ID for direct invocation
@@ -254,7 +262,103 @@ You are an expert cloud security and DevOps engineer at VPBank, specializing in 
 Please provide comprehensive analysis in clear markdown format.
 """
 
-    # Invoke Bedrock for analysis
+#     # Invoke Bedrock for analysis
+#     try:
+#         llm_analysis_output = invoke_bedrock_knowledge_base(prompt_for_bedrock)
+#     except Exception as e:
+#         print(f"Unexpected error in Bedrock analysis: {e}")
+#         llm_analysis_output = f"""
+# **SYSTEM ERROR:** An unexpected error occurred during drift analysis.
+# Error: `{str(e)}`
+
+# **Manual Review Required:** Please investigate the following drift manually:
+# - Resource: {resource_name} ({resource_id})
+# - Type: {resource_type}
+# - Changes: {drift_details_str}
+# """
+
+#     # Construct enhanced SNS email
+#     email_subject = f"🚨 DriftGuard Alert: {resource_name} ({resource_type}) - {drift_id}"
+    
+#     email_body = f"""
+# Dear DevOps/SRE Team,
+
+# DriftGuard has detected infrastructure drift that requires immediate attention.
+
+# ---
+# ## 📋 **Drift Event Summary**
+# - **Drift ID:** `{drift_id}`
+# - **Resource:** `{resource_name}` ({resource_id})
+# - **Type:** `{resource_type}`
+# - **Account:** `{aws_account_id}`
+# - **Region:** `{aws_region}`
+# - **Detected:** `{change_timestamp}` UTC
+
+# ---
+# ## 🔍 **AI Analysis & Remediation**
+
+# {llm_analysis_output}
+
+# ---
+# **This is an automated alert from DriftGuard System**  
+# For technical issues, contact the DevOps team.
+# """
+
+#     # Store drift analysis in S3 for Knowledge Base
+#     S3_BUCKET_FOR_DRIFT_HISTORY = os.environ.get('S3_BUCKET_FOR_DRIFT_HISTORY', "statetf-bucket")
+#     if S3_BUCKET_FOR_DRIFT_HISTORY:
+#         try:
+#             s3_client = boto3.client('s3')
+#             drift_report_for_kb = {
+#                 "drift_id": drift_id,
+#                 "resource_type": resource_type,
+#                 "resource_id": resource_id,
+#                 "resource_name": resource_name,
+#                 "aws_account_id": aws_account_id,
+#                 "aws_region": aws_region,
+#                 "change_timestamp": change_timestamp,
+#                 "detected_drift_details": detected_drift_details,
+#                 "cloudtrail_event_summary": cloudtrail_event_summary,
+#                 "desired_state_snapshot": desired_state_snapshot,
+#                 "actual_state_snapshot": actual_state_snapshot,
+#                 "ai_analysis_markdown": llm_analysis_output,
+#                 "report_generated_at": datetime.now().isoformat()
+#             }
+            
+#             s3_key = f"drift-reports/{datetime.now().strftime('%Y/%m/%d')}/{drift_id}.json"
+            
+#             s3_client.put_object(
+#                 Bucket=S3_BUCKET_FOR_DRIFT_HISTORY,
+#                 Key=s3_key,
+#                 Body=json.dumps(drift_report_for_kb, indent=2),
+#                 ContentType='application/json'
+#             )
+#             print(f"Drift report stored to S3: s3://{S3_BUCKET_FOR_DRIFT_HISTORY}/{s3_key}")
+            
+#         except Exception as e:
+#             print(f"Warning: Failed to store drift report to S3: {e}")
+
+#     # Publish to SNS
+#     try:
+#         sns_client.publish(
+#             TopicArn=SNS_TOPIC_ARN,
+#             Subject=email_subject,
+#             Message=email_body
+#         )
+#         print(f"Successfully published drift alert to SNS: {SNS_TOPIC_ARN}")
+        
+#     except Exception as e:
+#         print(f"CRITICAL ERROR: Failed to publish SNS message: {e}")
+#         raise e
+
+#     return {
+#         'statusCode': 200,
+#         'body': json.dumps({
+#             'message': 'Drift analyzed and notification sent successfully',
+#             'drift_id': drift_id,
+#             'analysis_status': 'completed'
+#         })
+#     }
     try:
         llm_analysis_output = invoke_bedrock_knowledge_base(prompt_for_bedrock)
     except Exception as e:
@@ -269,34 +373,7 @@ Error: `{str(e)}`
 - Changes: {drift_details_str}
 """
 
-    # Construct enhanced SNS email
-    email_subject = f"🚨 DriftGuard Alert: {resource_name} ({resource_type}) - {drift_id}"
-    
-    email_body = f"""
-Dear DevOps/SRE Team,
-
-DriftGuard has detected infrastructure drift that requires immediate attention.
-
----
-## 📋 **Drift Event Summary**
-- **Drift ID:** `{drift_id}`
-- **Resource:** `{resource_name}` ({resource_id})
-- **Type:** `{resource_type}`
-- **Account:** `{aws_account_id}`
-- **Region:** `{aws_region}`
-- **Detected:** `{change_timestamp}` UTC
-
----
-## 🔍 **AI Analysis & Remediation**
-
-{llm_analysis_output}
-
----
-**This is an automated alert from DriftGuard System**  
-For technical issues, contact the DevOps team.
-"""
-
-    # Store drift analysis in S3 for Knowledge Base
+    # Store drift analysis in S3 for Knowledge Base (remains the same)
     S3_BUCKET_FOR_DRIFT_HISTORY = os.environ.get('S3_BUCKET_FOR_DRIFT_HISTORY', "statetf-bucket")
     if S3_BUCKET_FOR_DRIFT_HISTORY:
         try:
@@ -316,9 +393,9 @@ For technical issues, contact the DevOps team.
                 "ai_analysis_markdown": llm_analysis_output,
                 "report_generated_at": datetime.now().isoformat()
             }
-            
+
             s3_key = f"drift-reports/{datetime.now().strftime('%Y/%m/%d')}/{drift_id}.json"
-            
+
             s3_client.put_object(
                 Bucket=S3_BUCKET_FOR_DRIFT_HISTORY,
                 Key=s3_key,
@@ -326,21 +403,80 @@ For technical issues, contact the DevOps team.
                 ContentType='application/json'
             )
             print(f"Drift report stored to S3: s3://{S3_BUCKET_FOR_DRIFT_HISTORY}/{s3_key}")
-            
+
         except Exception as e:
             print(f"Warning: Failed to store drift report to S3: {e}")
 
-    # Publish to SNS
+    # Construct email subject
+    email_subject = f"🚨 DriftGuard Alert: {resource_name} ({resource_type}) - {drift_id}"
+
+    # Construct the Markdown body for the email
+    email_markdown_body = f"""
+Dear DevOps/SRE Team,
+
+DriftGuard has detected infrastructure drift that requires immediate attention.
+
+---
+## 📋 **Drift Event Summary**
+- **Drift ID:** `{drift_id}`
+- **Resource:** `{resource_name}` ({resource_id})
+- **Type:** `{resource_type}`
+- **Account:** `{aws_account_id}`
+- **Region:** `{aws_region}`
+- **Detected:** `{change_timestamp}` UTC
+
+---
+## 🔍 **AI Analysis & Remediation**
+
+{llm_analysis_output}
+
+---
+**This is an automated alert from DriftGuard System**
+For technical issues, contact the DevOps team.
+"""
+
+    # Convert Markdown to HTML
+    email_html_body = markdown.markdown(email_markdown_body)
+
+    # Publish to SNS (optional, if you still want a basic notification)
     try:
         sns_client.publish(
             TopicArn=SNS_TOPIC_ARN,
             Subject=email_subject,
-            Message=email_body
+            Message=email_markdown_body # SNS still sends plain text or basic HTML, so using markdown for clarity
         )
-        print(f"Successfully published drift alert to SNS: {SNS_TOPIC_ARN}")
-        
+        print(f"Successfully published basic drift alert to SNS: {SNS_TOPIC_ARN}")
+
     except Exception as e:
-        print(f"CRITICAL ERROR: Failed to publish SNS message: {e}")
+        print(f"ERROR: Failed to publish SNS message: {e}")
+        # Don't raise here if you want SES to still try sending
+
+    # Send email via SES
+    try:
+        ses_client.send_email(
+            Source=SENDER_EMAIL_ADDRESS,
+            Destination={
+                'ToAddresses': RECIPIENT_EMAIL_ADDRESSES
+            },
+            Message={
+                'Subject': {
+                    'Data': email_subject
+                },
+                'Body': {
+                    'Html': {
+                        'Data': email_html_body
+                    },
+                    'Text': {
+                        'Data': email_markdown_body # Provide a plain text version for email clients that don't render HTML
+                    }
+                }
+            }
+        )
+        print(f"Successfully sent rich drift alert email via SES from {SENDER_EMAIL_ADDRESS} to {', '.join(RECIPIENT_EMAIL_ADDRESSES)}")
+
+    except Exception as e:
+        print(f"CRITICAL ERROR: Failed to send email via SES: {e}")
+        # This is a critical failure for email notification, so you might want to re-raise or log prominently.
         raise e
 
     return {
