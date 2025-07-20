@@ -10,19 +10,30 @@ module "sns" {
 module "aws_config" {
   source = "./modules/aws_config"
   s3_bucket = module.s3.bucket_name
-  config_drift_lambda_arn = module.lambda.config_drift_arn
+  config_drift_lambda_arn = module.lambda.lambda_arn
 }
 
 module "lambda" {
   source = "./modules/lambda"
   sns_topic_arn = module.sns.topic_arn
   s3_bucket = module.s3.bucket_name
+  knowledge_base_id = module.knowledge_base.knowledge_base_id
+  retriever_id = module.knowledge_base.retriever_id
 }
 
 module "evenbridge" {
   source = "./modules/eventbridge"
   lambda_arn = module.lambda.lambda_arn
   s3_bucket = module.s3.bucket_name  
+}
+
+module "bedrock" {
+  source = "./modules/bedrock"
+  # drift_lambda_arn = module.lambda.lambda_arn
+}
+
+module "knowledge_base" {
+  source = "./modules/knowledge_base"
 }
 
 resource "aws_lambda_permission" "s3_invoke" {

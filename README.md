@@ -1,128 +1,148 @@
-# 🔍 Terraform Drift Detection System
+# Infrastructure Drift Detection System
 
-This repository implements a **Terraform Drift Detection System** built for the **VPBank Hackathon**, using AWS-native services including Lambda, EventBridge, SNS, S3, CloudTrail, and Amazon Bedrock. The system continuously monitors infrastructure drift and provides intelligent, explainable insights into drift resources between real Infrastructure and the Terraform IAC code.
+A comprehensive system for detecting and reporting infrastructure drift in AWS environments.
 
----
+## Overview
 
-## 🧠 Key Features
+This project provides real-time detection of infrastructure drift - when your actual AWS resources differ from what's defined in your Terraform code. It helps maintain infrastructure as code integrity by alerting you when resources are:
 
-- **Automatic Drift Detection**:
-  - Triggered on Terraform state file changes in S3.
-  - Also supports scheduled drift checks via EventBridge.
+- Created outside of Terraform
+- Modified outside of Terraform
+- Deleted from AWS while still in Terraform code
 
-- **Change Attribution**:
-  - Correlates drift with CloudTrail logs to identify who made the changes.
+## Features
 
-- **LLM-Powered Explanations**:
-  - Uses Amazon Bedrock to generate human-readable explanations of drift and suggested remediation.
+- **Multi-source drift detection**:
+  - Terraform state vs. actual AWS resources
+  - AWS Config configuration changes
+  - CloudTrail API call monitoring
+  - S3 state file change detection
 
-- **Alerting**:
-  - Sends drift reports via Amazon SNS (email or webhook).
-  - Reports include resource diffs, attribution, and action suggestions.
+- **Comprehensive resource coverage**:
+  - EC2 instances
+  - S3 buckets
+  - IAM users
+  - RDS databases
+  - VPCs and subnets
+  - Lambda functions
+  - DynamoDB tables
 
----
+- **User attribution**:
+  - Identifies who made changes
+  - Shows when changes were made
+  - Indicates which region changes occurred in
 
-## 🛠 Architecture
+- **Multiple detection methods**:
+  - Scheduled scans (every 5 minutes)
+  - Real-time event-based detection
+  - Manual invocation
 
-**Components:**
-- **S3** – Stores Terraform state files.
-- **EventBridge** – Triggers Lambda on state updates or on schedule.
-- **Lambda** – Core drift detection logic:
-  - Parses Terraform plan.
-  - Compares actual vs. expected infrastructure.
-  - Queries CloudTrail for attribution.
-  - Calls Amazon Bedrock for explanation generation.
-- **CloudTrail** – Audits user actions for attribution.
-- **SNS** – Sends alert notifications.
+- **Detailed reporting**:
+  - Email notifications via SNS
+  - Comprehensive drift summaries
+  - Change categorization
 
-![Architecture Diagram](./architecture.png)
+## Architecture
 
----
+![Architecture Diagram](docs/architecture.png)
 
-## 🚀 Getting Started
+The system consists of:
+
+1. **Lambda Functions**:
+   - `iac-drift-checker`: Main drift detection function
+   - `iac-config-listener`: Processes AWS Config events
+
+2. **EventBridge Rules**:
+   - Scheduled drift checks (every 5 minutes)
+   - AWS Config change detection
+   - CloudTrail API call monitoring
+   - S3 state file change detection
+
+3. **AWS Config**:
+   - Configuration recorder
+   - Delivery channel
+
+4. **SNS Topic**:
+   - Email notifications
+
+## Setup
 
 ### Prerequisites
 
 - AWS CLI configured
-- Terraform ≥ 5.0
-- An AWS account with permissions to create:
-  - Lambda, S3, CloudTrail, SNS, IAM, EventBridge
+- Terraform v1.0+
+- S3 bucket for Terraform state
 
-### 1. Clone and Deploy
+### Deployment
 
-```bash
-git clone https://github.com/doank15/Hackathon-VPBank.git
-cd Hackathon-VPBank/terraform
+1. Clone the repository:
 
-terraform init
-terraform apply
-```
+   ```
+   git clone https://github.com/yourusername/infrastructure-drift-detection.git
+   cd infrastructure-drift-detection
+   ```
 
-### 2. Upload State File
+2. Update variables:
 
-Place your Terraform state in the configured S3 bucket:
+   ```
+   cp terraform.tfvars.example terraform.tfvars
+   # Edit terraform.tfvars with your values
+   ```
 
-```bash
-aws s3 cp terraform.tfstate s3://your-drift-bucket/envs/prod/terraform.tfstate
-```
+3. Deploy:
 
-This triggers the drift detection Lambda.
+   ```
+   terraform init
+   terraform apply -var="alert_email=your-email@example.com"
+   ```
 
----
+## Usage
 
-## 📬 Sample Alert
+### Viewing Drift Reports
 
-```
-Drift Detected: 2 resources changed outside Terraform.
+Drift reports are sent to the email address specified during deployment. Each report includes:
 
-- aws_security_group.sg_web (MODIFIED)
-- aws_s3_bucket.logs (DELETED)
+- **Unmanaged Resources**: Resources created outside of Terraform
+- **Modified Resources**: Terraform-managed resources changed outside of Terraform
+- **Deleted Resources**: Resources deleted from AWS but still in Terraform code
 
-Change Attributed To: user:alice@vpbank.com
-Explanation (via Bedrock):
-"The security group was updated manually to allow wider IP access. This could pose a security risk."
+### Manual Drift Detection
 
-Recommended Action:
-- Revert the changes via Terraform apply
-- OR import and manage manually updated resources
-```
-
----
-
-## 🤖 How It Works
-
-1. **Trigger**: On new state file upload (S3 event), Lambda is invoked.
-2. **Plan Comparison**: Terraform is run in `-refresh-only` mode to detect drift.
-3. **Attribution**: CloudTrail is queried for changes to impacted resources.
-4. **Explanation**: Amazon Bedrock (Claude or Jurassic-2) generates natural language summaries.
-5. **Notification**: SNS delivers a report to subscribers.
-
----
-
-## 🧪 Testing Locally
-
-You can simulate drift detection locally with:
+To run drift detection manually:
 
 ```bash
-cd scripts/
-./simulate-drift.sh --state-file ./examples/prod.tfstate
+aws lambda invoke --function-name iac-drift-checker --payload '{}' response.json
+cat response.json
 ```
 
----
+## Customization
 
-## 📌 Roadmap
+### Adding Resource Types
 
-- [x] S3-triggered detection
-- [x] Scheduled drift check via EventBridge
-- [x] CloudTrail-based attribution
-- [x] LLM summaries with Bedrock
-- [ ] Web dashboard for drift history
-- [ ] Auto-remediation via approval flow
+Edit `simple_drift_checker.py` to add support for additional resource types:
 
----
+1. Add resource discovery in `get_actual_resources()`
+2. Add comparison logic in `run_full_drift_detection()`
+3. Add CloudTrail event names in `get_change_author()`
 
-## 📜 License
+### Modifying Detection Frequency
 
-MIT License — see [LICENSE](./LICENSE)
+Change the schedule expression in `modules/eventbridge/main.tf`:
 
----
+```hcl
+schedule_expression = "rate(5 minutes)"  # Change to desired frequency
+```
+
+## Troubleshooting
+
+- **Missing CloudTrail Events**: Extend the search period in `get_change_author()` by increasing `timedelta(days=30)` to a larger value
+- **Lambda Timeouts**: Optimize resource discovery or increase Lambda timeout in `modules/lambda/drift_checker.tf`
+- **False Positives**: Add exclusion patterns in `run_full_drift_detection()`
+
+## License
+
+MIT
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
