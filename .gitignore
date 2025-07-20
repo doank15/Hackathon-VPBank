@@ -39,3 +39,4 @@ terraform.rc
 
 # ignore env
 .env
+python/
