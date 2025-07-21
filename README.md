@@ -38,19 +38,22 @@ This project provides real-time detection of infrastructure drift - when your ac
   - Manual invocation
 
 - **Detailed reporting**:
-  - Email notifications via SNS
+  - Email notifications via SNS (current)
+  - HTML email notifications via SES (planned)
   - Comprehensive drift summaries
   - Change categorization
 
 ## Architecture
 
-![Architecture Diagram](docs/architecture.png)
+![Architecture Diagram](img/architecture.png)
 
 The system consists of:
 
 1. **Lambda Functions**:
    - `iac-drift-checker`: Main drift detection function
    - `iac-config-listener`: Processes AWS Config events
+   - `bedrock-analyzer`: AI analysis of drift reports
+   - `drift-rag`: Retrieval Augmented Generation for drift history queries
 
 2. **EventBridge Rules**:
    - Scheduled drift checks (every 5 minutes)
@@ -63,7 +66,20 @@ The system consists of:
    - Delivery channel
 
 4. **SNS Topic**:
-   - Email notifications
+   - Email notifications (current architecture)
+
+### Future Architecture Enhancements (Planned)
+
+1. **SES (Simple Email Service)**:
+   - HTML email notifications with rich formatting
+
+2. **Amazon Bedrock**:
+   - AI analysis of drift patterns
+   - Natural language processing for drift reports
+
+3. **Knowledge Base**:
+   - S3 bucket for drift history storage
+   - Vector database for RAG queries
 
 ## Setup
 
