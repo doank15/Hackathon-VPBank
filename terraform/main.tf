@@ -17,8 +17,8 @@ module "lambda" {
   source = "./modules/lambda"
   sns_topic_arn = module.sns.topic_arn
   s3_bucket = module.s3.bucket_name
-  knowledge_base_id = module.knowledge_base.knowledge_base_id
-  retriever_id = module.knowledge_base.retriever_id
+  # knowledge_base_id = module.knowledge_base.knowledge_base_id
+  # retriever_id = module.knowledge_base.retriever_id
 }
 
 module "evenbridge" {

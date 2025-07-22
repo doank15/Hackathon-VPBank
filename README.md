@@ -52,8 +52,6 @@ The system consists of:
 1. **Lambda Functions**:
    - `iac-drift-checker`: Main drift detection function
    - `iac-config-listener`: Processes AWS Config events
-   - `bedrock-analyzer`: AI analysis of drift reports
-   - `drift-rag`: Retrieval Augmented Generation for drift history queries
 
 2. **EventBridge Rules**:
    - Scheduled drift checks (every 5 minutes)
@@ -66,20 +64,7 @@ The system consists of:
    - Delivery channel
 
 4. **SNS Topic**:
-   - Email notifications (current architecture)
-
-### Future Architecture Enhancements (Planned)
-
-1. **SES (Simple Email Service)**:
-   - HTML email notifications with rich formatting
-
-2. **Amazon Bedrock**:
-   - AI analysis of drift patterns
-   - Natural language processing for drift reports
-
-3. **Knowledge Base**:
-   - S3 bucket for drift history storage
-   - Vector database for RAG queries
+   - Email notifications
 
 ## Setup
 
@@ -154,11 +139,3 @@ schedule_expression = "rate(5 minutes)"  # Change to desired frequency
 - **Missing CloudTrail Events**: Extend the search period in `get_change_author()` by increasing `timedelta(days=30)` to a larger value
 - **Lambda Timeouts**: Optimize resource discovery or increase Lambda timeout in `modules/lambda/drift_checker.tf`
 - **False Positives**: Add exclusion patterns in `run_full_drift_detection()`
-
-## License
-
-MIT
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
