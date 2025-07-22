@@ -64,6 +64,7 @@ resource "aws_config_delivery_channel" "channel" {
   name           = "default"
   s3_bucket_name = var.s3_bucket
   sns_topic_arn  = aws_sns_topic.config_topic.arn
+  depends_on     = [aws_config_configuration_recorder.config]
 }
 
 resource "aws_sns_topic" "config_topic" {
@@ -91,6 +92,8 @@ resource "aws_cloudwatch_event_rule" "config_changes" {
       configurationItemStatus = ["OK", "ResourceDiscovered"]
     }
   })
+  
+  depends_on = [aws_config_configuration_recorder_status.status]
 }
 
 resource "aws_cloudwatch_event_target" "config_lambda" {

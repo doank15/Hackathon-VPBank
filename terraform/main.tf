@@ -29,7 +29,7 @@ module "evenbridge" {
 
 module "bedrock" {
   source = "./modules/bedrock"
-  # drift_lambda_arn = module.lambda.lambda_arn
+  drift_lambda_arn = module.lambda.lambda_arn
 }
 
 module "knowledge_base" {
